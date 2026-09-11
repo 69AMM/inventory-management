@@ -1,0 +1,19 @@
+import { Link, useNavigate, useParams } from 'react-router-dom';
+import { ArrowLeft, Pencil, Package, ArrowDownToLine, ArrowUpFromLine } from 'lucide-react';
+import { useInventory } from '../context/InventoryContext';
+import Badge from '../components/common/Badge';
+import LoadingState from '../components/common/LoadingState';
+import { formatCurrency, formatDateTime } from '../utils/inventoryUtils';
+
+export default function ProductDetails() {
+  const { id } = useParams();
+  const navigate = useNavigate();
+  const { products, stockMovements, settings, loading } = useInventory();
+  const product = products.find((item) => item.id === id);
+  if (loading) return <LoadingState label="Loading product..." />;
+  if (!product) return <div className="card p-8 text-center"><h1 className="font-semibold">Product not found</h1><button className="btn-primary mt-4" onClick={() => navigate('/products')}>Back to products</button></div>;
+  const movements = stockMovements.filter((movement) => movement.productId === id);
+  return <div className="space-y-5 max-w-5xl mx-auto"><div className="flex items-center justify-between"><button className="btn-ghost px-0" onClick={() => navigate('/products')}><ArrowLeft className="w-4 h-4" />Back to products</button><Link to={`/products/${id}/edit`} className="btn-secondary"><Pencil className="w-4 h-4" />Edit product</Link></div><div className="card p-5 sm:p-7"><div className="flex flex-col sm:flex-row gap-5"><img src={product.image} alt={product.name} className="w-32 h-32 rounded-lg object-cover bg-slate-100" /><div className="flex-1"><div className="flex flex-wrap items-center gap-2"><h1 className="text-2xl font-semibold">{product.name}</h1><Badge>{product.status}</Badge></div><p className="text-sm text-slate-500 mt-1">{product.sku} · {product.category}</p><div className="grid grid-cols-2 sm:grid-cols-4 gap-4 mt-6"><Metric label="Quantity" value={product.quantity} /><Metric label="Min. level" value={product.minimumStockLevel} /><Metric label="Selling price" value={formatCurrency(product.price, settings?.currency)} /><Metric label="Cost price" value={formatCurrency(product.costPrice, settings?.currency)} /></div></div></div><div className="grid grid-cols-1 sm:grid-cols-2 gap-4 border-t border-slate-200 dark:border-slate-800 mt-6 pt-5 text-sm"><div><span className="text-slate-400">Supplier</span><p className="font-medium mt-1">{product.supplier}</p></div><div><span className="text-slate-400">Last updated</span><p className="font-medium mt-1">{formatDateTime(product.updatedAt)}</p></div></div></div><div className="card overflow-hidden"><div className="p-5 border-b border-slate-200 dark:border-slate-800"><h2 className="font-semibold">Movement history</h2><p className="text-sm text-slate-500 mt-1">Stock changes recorded for this product.</p></div>{movements.length === 0 ? <div className="p-8 text-center text-sm text-slate-500">No movement history yet.</div> : <div className="divide-y divide-slate-100 dark:divide-slate-800">{movements.map((movement) => <div key={movement.id} className="p-4 flex items-center gap-3"><div className={`p-2 rounded-full ${movement.type === 'Stock In' ? 'bg-green-50 text-green-600' : 'bg-red-50 text-red-600'}`}>{movement.type === 'Stock In' ? <ArrowDownToLine className="w-4 h-4" /> : <ArrowUpFromLine className="w-4 h-4" />}</div><div className="flex-1"><p className="font-medium">{movement.type} · {movement.quantity} units</p><p className="text-xs text-slate-400">{formatDateTime(movement.date)}{movement.notes ? ` · ${movement.notes}` : ''}</p></div></div>)}</div>}</div><Link to="/stock-movements" className="btn-secondary"><Package className="w-4 h-4" />Record stock movement</Link></div>;
+}
+
+function Metric({ label, value }) { return <div><p className="text-xs text-slate-400">{label}</p><p className="text-lg font-semibold mt-1">{value}</p></div>; }
